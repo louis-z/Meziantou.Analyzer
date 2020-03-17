@@ -99,3 +99,4 @@
 |[MA0096](Rules/MA0096.md)|Design|A class that implements IComparable\<T\> should also implement IEquatable\<T\>|<span title='Warning'>⚠️</span>|✔️|❌|
 |[MA0097](Rules/MA0097.md)|Design|A class that implements IComparable\<T\> or IComparable should override comparison operators|<span title='Warning'>⚠️</span>|✔️|❌|
 |[MA0098](Rules/MA0098.md)|Performance|Use indexer instead of extension methods|<span title='Info'>ℹ️</span>|✔️|✔️|
+|[MA1000](Rules/MA1000.md)|Naming|Use proper spelling|<span title='Info'>ℹ️</span>|✔️|❌|
