@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Globalization;
-using System.IO;
-using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 
@@ -9,13 +7,10 @@ namespace Meziantou.Analyzer.Configurations
 {
     public static class AnalyzerOptionsExtensions
     {
-        private static readonly ConditionalWeakTable<AnalyzerOptions, ConfigurationHierarchy> s_cachedOptions
-            = new ConditionalWeakTable<AnalyzerOptions, ConfigurationHierarchy>();
-
-        public static bool GetConfigurationValue(this AnalyzerOptions options, string filePath, string key, bool defaultValue)
+        public static bool GetConfigurationValue(this AnalyzerOptions options, SyntaxTree tree, string key, bool defaultValue)
         {
-            var configuration = GetConfigurationHierarchy(options);
-            if (configuration.TryGetValue(filePath, key, out var value))
+            var analyzerConfigOptions = options.AnalyzerConfigOptionsProvider.GetOptions(tree);
+            if (analyzerConfigOptions.TryGetValue(key, out var value))
             {
                 return ChangeType(value, defaultValue);
             }
@@ -23,10 +18,10 @@ namespace Meziantou.Analyzer.Configurations
             return defaultValue;
         }
 
-        public static bool? GetConfigurationValue(this AnalyzerOptions options, string filePath, string key, bool? defaultValue)
+        public static bool? GetConfigurationValue(this AnalyzerOptions options, SyntaxTree tree, string key, bool? defaultValue)
         {
-            var configuration = GetConfigurationHierarchy(options);
-            if (configuration.TryGetValue(filePath, key, out var value))
+            var analyzerConfigOptions = options.AnalyzerConfigOptionsProvider.GetOptions(tree);
+            if (analyzerConfigOptions.TryGetValue(key, out var value))
             {
                 return ChangeType(value, defaultValue);
             }
@@ -34,10 +29,10 @@ namespace Meziantou.Analyzer.Configurations
             return defaultValue;
         }
 
-        public static int GetConfigurationValue(this AnalyzerOptions options, string filePath, string key, int defaultValue)
+        public static int GetConfigurationValue(this AnalyzerOptions options, SyntaxTree tree, string key, int defaultValue)
         {
-            var configuration = GetConfigurationHierarchy(options);
-            if (configuration.TryGetValue(filePath, key, out var value))
+            var analyzerConfigOptions = options.AnalyzerConfigOptionsProvider.GetOptions(tree);
+            if (analyzerConfigOptions.TryGetValue(key, out var value))
             {
                 return ChangeType(value, defaultValue);
             }
@@ -45,10 +40,10 @@ namespace Meziantou.Analyzer.Configurations
             return defaultValue;
         }
 
-        public static ReportDiagnostic? GetConfigurationValue(this AnalyzerOptions options, string filePath, string key, ReportDiagnostic? defaultValue)
+        public static ReportDiagnostic? GetConfigurationValue(this AnalyzerOptions options, SyntaxTree tree, string key, ReportDiagnostic? defaultValue)
         {
-            var configuration = GetConfigurationHierarchy(options);
-            if (configuration.TryGetValue(filePath, key, out var value))
+            var analyzerConfigOptions = options.AnalyzerConfigOptionsProvider.GetOptions(tree);
+            if (analyzerConfigOptions.TryGetValue(key, out var value))
             {
                 if (value != null && Enum.TryParse<ReportDiagnostic>(value, ignoreCase: true, out var result))
                     return result;
@@ -57,10 +52,10 @@ namespace Meziantou.Analyzer.Configurations
             return defaultValue;
         }
 
-        public static bool TryGetConfigurationValue(this AnalyzerOptions options, string filePath, string key, out string value)
+        public static bool TryGetConfigurationValue(this AnalyzerOptions options, SyntaxTree tree, string key, out string value)
         {
-            var configuration = GetConfigurationHierarchy(options);
-            return configuration.TryGetValue(filePath, key, out value);
+            var analyzerConfigOptions = options.AnalyzerConfigOptionsProvider.GetOptions(tree);
+            return analyzerConfigOptions.TryGetValue(key, out value);
         }
 
         public static bool TryGetConfigurationValue(this AnalyzerOptions options, IOperation operation, string key, out string value)
@@ -70,34 +65,7 @@ namespace Meziantou.Analyzer.Configurations
 
         public static bool TryGetConfigurationValue(this AnalyzerOptions options, SyntaxNode syntaxNode, string key, out string value)
         {
-            return TryGetConfigurationValue(options, syntaxNode.SyntaxTree.FilePath, key, out value);
-        }
-
-        private static ConfigurationHierarchy GetConfigurationHierarchy(this AnalyzerOptions options)
-        {
-            // TryGetValue upfront to avoid allocating createValueCallback if the entry already exists. 
-            if (s_cachedOptions.TryGetValue(options, out var categorizedAnalyzerConfigOptions))
-            {
-                return categorizedAnalyzerConfigOptions;
-            }
-
-            var createValueCallback = new ConditionalWeakTable<AnalyzerOptions, ConfigurationHierarchy>.CreateValueCallback(_ => new ConfigurationHierarchy(GetFromAdditionalFiles()));
-            return s_cachedOptions.GetValue(options, createValueCallback);
-
-            EditorConfigFile GetFromAdditionalFiles()
-            {
-                foreach (var additionalFile in options.AdditionalFiles)
-                {
-                    var fileName = Path.GetFileName(additionalFile.Path);
-                    if (fileName.Equals(".editorconfig", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var text = additionalFile.GetText();
-                        return EditorConfigFileParser.Parse(text);
-                    }
-                }
-
-                return EditorConfigFile.Empty;
-            }
+            return TryGetConfigurationValue(options, syntaxNode.SyntaxTree, key, out value);
         }
 
         private static bool ChangeType(string value, bool defaultValue)

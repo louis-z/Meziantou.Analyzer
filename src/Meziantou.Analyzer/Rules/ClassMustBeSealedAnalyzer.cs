@@ -107,7 +107,7 @@ namespace Meziantou.Analyzer.Rules
             {
                 foreach (var location in symbol.Locations)
                 {
-                    if (options.GetConfigurationValue(location.SourceTree.FilePath, RuleIdentifiers.ClassMustBeSealed + ".public_class_should_be_sealed", (bool?)null) == true)
+                    if (options.GetConfigurationValue(location.SourceTree, RuleIdentifiers.ClassMustBeSealed + ".public_class_should_be_sealed", (bool?)null) == true)
                         return true;
                 }
 
@@ -117,7 +117,7 @@ namespace Meziantou.Analyzer.Rules
             {
                 foreach (var location in symbol.Locations)
                 {
-                    if (options.GetConfigurationValue(location.SourceTree.FilePath, RuleIdentifiers.ClassMustBeSealed + ".class_with_virtual_member_shoud_be_sealed", (bool?)null) == true)
+                    if (options.GetConfigurationValue(location.SourceTree, RuleIdentifiers.ClassMustBeSealed + ".class_with_virtual_member_shoud_be_sealed", (bool?)null) == true)
                         return true;
                 }
 
