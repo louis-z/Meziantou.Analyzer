@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Meziantou.Analyzer.Rules;
@@ -9,7 +9,7 @@ namespace Meziantou.Analyzer.Test.Rules
 {
     public sealed class UseProperSpellingTests
     {
-        private readonly string[] _knownMisspelledWordVariations = new[]
+        private static readonly string[] _knownMisspellings = new[]
         {
             "adress",
             "adresses",
@@ -32,7 +32,11 @@ namespace Meziantou.Analyzer.Test.Rules
             "sucessfull",
         };
 
-        private readonly Random _random = new Random();
+        public static IEnumerable<object[]> GetKnownMisspellings()
+        {
+            foreach (var word in _knownMisspellings)
+                yield return new[] { word };
+        }
 
         private static ProjectBuilder CreateProjectBuilder()
         {
@@ -41,14 +45,14 @@ namespace Meziantou.Analyzer.Test.Rules
         }
 
         [Fact]
-        public async Task Test_CommentsContainKnownMisspellings_DiagnosticIsReportedForEachOne()
+        public async Task Test_CommentsWithKnownMisspellings_DiagnosticReportedForEach()
         {
             var sourceCode = @"
 class TestClass
 {
     void Test()
     {
-        // Most [|developpers|] would not have written the following. Is this the work of a JUNIOR [|DEVELOPPER|]?
+        // Most [|developpers|] would not have written the following. Is this the work of a JUNIOR DEVELOPPER?
         if (true)
             return;
         /*
@@ -63,8 +67,9 @@ class TestClass
                   .ValidateAsync();
         }
 
-        [Fact]
-        public async Task Test_ValidateAllKnownMisspellingVariations_DiagnosticIsReportedForEachOne()
+        [Theory]
+        [MemberData(nameof(GetKnownMisspellings))]
+        public async Task Test_KnownMisspellings_DiagnosticReportedForEach(string misspelledWord)
         {
             var sb = new StringBuilder(@"
 class TestClass
@@ -72,17 +77,13 @@ class TestClass
     void Test()
     {
 ");
-            foreach (var word in _knownMisspelledWordVariations)
-            {
-                var array = word.ToCharArray();
-                for (var i = 0; i < array.Length; i++)
-                {
-                    array[i] = ToRandomCase(array[i]);
-                }
-                sb.Append("        // [|").Append(array).AppendLine("|] ");
-            }
+            var capitalized = char.ToUpperInvariant(misspelledWord[0]) + misspelledWord.Substring(1);
 
-            sb.Append(@"        }
+            sb.Append("        // [|").Append(misspelledWord).AppendLine("|]");
+            sb.Append("        // [|").Append(misspelledWord).AppendLine("|]Suffix");
+            sb.Append("        // ").Append("prefix[|").Append(capitalized).AppendLine("|]");
+            sb.Append("        // ").Append("prefix[|").Append(capitalized).AppendLine("|]Suffix");
+            sb.Append(@"    }
 }");
             var sourceCode = sb.ToString();
 
@@ -91,11 +92,30 @@ class TestClass
                   .ValidateAsync();
         }
 
-        private char ToRandomCase(char c)
+        [Theory]
+        [MemberData(nameof(GetKnownMisspellings))]
+        public async Task Test_KnownMisspellingOutOfContext_NoDiagnosticReported(string misspelledWord)
         {
-            return (_random.Next() % 2 == 0) ?
-                char.ToUpper(c) :
-                char.ToLower(c);
+            var sb = new StringBuilder(@"
+class TestClass
+{
+    void Test()
+    {
+");
+            var capitalized = char.ToUpperInvariant(misspelledWord[0]) + misspelledWord.Substring(1);
+            var maybeAcronym = misspelledWord.ToUpperInvariant();
+
+            sb.Append("        // ").Append(maybeAcronym).AppendLine("");
+            sb.Append("        // ").Append(misspelledWord).AppendLine("suffix");
+            sb.Append("        // ").Append("prefix").AppendLine(misspelledWord);
+            sb.Append("        // ").Append("prefix").Append(capitalized).AppendLine("suffix");
+            sb.Append(@"    }
+}");
+            var sourceCode = sb.ToString();
+
+            await CreateProjectBuilder()
+                  .WithSourceCode(sourceCode)
+                  .ValidateAsync();
         }
     }
 }

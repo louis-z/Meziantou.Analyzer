@@ -11,15 +11,14 @@ namespace Meziantou.Analyzer.Rules
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public sealed class UseProperSpellingAnalyzer : DiagnosticAnalyzer
     {
-        private const string B = @"\b"; // Word Boundary
         private static readonly WordFinder[] s_misspelledWordFinders = new[]
         {
-            new WordFinder($@"{B}adress(?<suffix>(es|ing)?){B}"),
-            new WordFinder($@"{B}catched{B}"),
-            new WordFinder($@"{B}checkout(?<suffix>(ed|ing)){B}"),
-            new WordFinder($@"{B}developp(?<suffix>(er|ers|ing)){B}"),
-            new WordFinder($@"{B}setup(?<suffix>(ed|ing|ped|ping)){B}"),
-            new WordFinder($@"{B}suc(ess|ces)(ful|full)?{B}"),
+            new WordFinder("adress(?<suffix>(es|ing)?)"),
+            new WordFinder("catched"),
+            new WordFinder("checkout(?<suffix>(ed|ing))"),
+            new WordFinder("developp(?<suffix>(er|ers|ing))"),
+            new WordFinder("setup(?<suffix>(ed|ing|ped|ping))"),
+            new WordFinder("suc(ess|ces)(ful|full)?"),
         };
 
         private static readonly DiagnosticDescriptor s_rule = new DiagnosticDescriptor(
@@ -56,7 +55,10 @@ namespace Meziantou.Analyzer.Rules
                     var matches = wordFinder.Matches(comment);
                     foreach (Match match in matches)
                     {
-                        var location = commentTrivia.SyntaxTree.GetLocation(new TextSpan(commentTrivia.SpanStart + match.Index, match.Length));
+                        var tree = commentTrivia.SyntaxTree;
+                        if (tree is null)
+                            continue;
+                        var location = tree.GetLocation(new TextSpan(commentTrivia.SpanStart + match.Index, match.Length));
                         var diagnostic = Diagnostic.Create(s_rule, location, match.ToString());
                         context.ReportDiagnostic(diagnostic);
                     }
